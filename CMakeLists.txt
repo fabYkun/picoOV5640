@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(camera camera.c ov5640.c imagecapture/StateMachine.c )
+add_executable(camera camera.c ov5640.c imagecapture/StateMachine.c imagecapture/ParallelImageCapture.c )
 
 pico_set_program_name(camera "camera")
 pico_set_program_version(camera "0.1")

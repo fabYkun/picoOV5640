@@ -1,0 +1,2 @@
+void common_hal_imagecapture_parallelimagecapture_construct();
+void common_hal_imagecapture_parallelimagecapture_singleshot_capture(uint8_t *buff, size_t buff_size);

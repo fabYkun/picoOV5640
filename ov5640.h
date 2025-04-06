@@ -1,12 +1,12 @@
 // pins
-#define MCLK_GPIO 21
+#define MCLK_GPIO 21 // also called XCLK, "master" clock
 #define SDA_GPIO 2
 #define SCL_GPIO 3
 #define PWD_GPIO 14
 #define RST_GPIO 15
-#define DATA_GPIO 6
-#define DATA_COUNT 8
-#define PCLK_GPIO 26
+#define DATA_GPIO 6 // first data pin connection (labelled D2 on OV5640 module)
+#define DATA_COUNT 8 // how many data pins there is - they should all be in line / next to DATA_GPIO
+#define PCLK_GPIO 26 // pixel clock
 #define VSYNC_GPIO 27
 #define HREF_GPIO 4
 
@@ -78,6 +78,9 @@ void _set_quality(uint8_t quality);
 void _set_white_balance(enum OV5640_WHITE_BALANCE_TYPE value);
 void _set_size_and_colorspace(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace);
 size_t _get_buffer_size(enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE size, uint quality);
+
+void power_on();
+void init_cam(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace, uint8_t quality);
 
 // I2C constants
 #define _SYSTEM_RESET00 0x3000

@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "hardware/clocks.h"
 #include "ov5640.h"
 
 const uint16_t _resolution_info[][3] = {
@@ -363,4 +364,40 @@ void _set_size_and_colorspace(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE
         _set_pll(false, 32, 1, 1, false, 1, true, 4);
 
     _write_list((enum OV5640_REGS_LIST_TYPE) colorspace);
+}
+
+void power_on() {
+    // masterclock - 150 MHz / 7.5 = 20Mhz (MCLK_FREQ)
+    clock_gpio_init(MCLK_GPIO, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 7.5);
+
+    // Initialize reset/powerdown pins, set their direction to output
+    gpio_init(RST_GPIO);
+    gpio_set_dir(RST_GPIO, GPIO_OUT);
+    gpio_init(PWD_GPIO);
+    gpio_set_dir(PWD_GPIO, GPIO_OUT);
+
+    // Procedure copied from adafruit's OV5640 library
+    gpio_put(RST_GPIO, 0);
+    gpio_put(PWD_GPIO, 1);
+    sleep_us(5000);
+    gpio_put(PWD_GPIO, 0);
+    sleep_us(1000);
+    gpio_put(RST_GPIO, 1);
+    sleep_us(20000);
+}
+
+void init_cam(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace, uint8_t quality) {
+    i2c_init(CAM_I2C, CAM_I2C_FREQ);
+    gpio_set_function(SDA_GPIO, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_GPIO, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA_GPIO);
+    gpio_pull_up(SCL_GPIO);
+
+    _write_list(OV5640_LIST_INIT);
+
+    _set_quality(quality);
+    _set_white_balance(OV5640_WHITE_BALANCE_AUTO);
+    _set_size_and_colorspace(size, colorspace);
+
+    sleep_ms(300);
 }
