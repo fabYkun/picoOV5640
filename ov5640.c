@@ -295,14 +295,12 @@ void _set_quality(uint8_t quality) {
 }
 
 size_t _get_buffer_size(enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE size, uint quality) {
-    uint16_t width = _resolution_info[size][0];
-    uint16_t height = _resolution_info[size][1];
     if (colorspace == OV5640_COLOR_JPEG) {
-        return 2 * width * height / quality; // arbitrary
+        return GET_JPG_BUFFER_SIZE(size, quality); // arbitrary
     } else if (colorspace == OV5640_COLOR_GRAYSCALE) {
-        return width * height;
+        return GET_GRAYSCALE_BUFFER_SIZE(size);
     }
-    return width * height * 2;
+    return GET_BUFFER_SIZE(size);
 }
 
 void _set_white_balance(enum OV5640_WHITE_BALANCE_TYPE value) {

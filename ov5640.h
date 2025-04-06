@@ -64,6 +64,12 @@ enum OV5640_REGS_LIST_TYPE {
     OV5640_LIST_COUNT
 };
 
+extern const uint16_t _resolution_info[][3];
+
+#define GET_JPG_BUFFER_SIZE(size, quality) ((2 * _resolution_info[size][0] * _resolution_info[size][1]) / quality)
+#define GET_GRAYSCALE_BUFFER_SIZE(size) (_resolution_info[size][0] * _resolution_info[size][1])
+#define GET_BUFFER_SIZE(size) (2 * _resolution_info[size][0] * _resolution_info[size][1])
+
 // interface functions
 void _write_register(uint16_t reg, uint8_t value);
 void _write_addr_reg(uint16_t reg, uint16_t x_value, uint16_t y_value);

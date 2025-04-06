@@ -12,7 +12,7 @@
             "gdbPath": "${command:raspberry-pi-pico.getGDBPath}",
             "device": "${command:raspberry-pi-pico.getChipUppercase}",
             "configFiles": [
-                "/home/faby/Documents/pico/pico2W-projects/camera/raspberrypi-swd.cfg",
+                "/home/faby/Documents/pico/pico2W-projects/picoOV5640/raspberrypi-swd.cfg",
                 "target/${command:raspberry-pi-pico.getTarget}.cfg"
             ],
             "svdFile": "${userHome}/.pico-sdk/sdk/2.1.1/src/${command:raspberry-pi-pico.getChip}/hardware_regs/${command:raspberry-pi-pico.getChipUppercase}.svd",

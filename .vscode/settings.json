@@ -43,6 +43,12 @@
         "ov5640.h": "c",
         "pio.h": "c",
         "statemachine.h": "c",
-        "dma.h": "c"
+        "dma.h": "c",
+        "parallelimagecapture.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "format": "c",
+        "initializer_list": "c",
+        "span": "c"
     }
 }
