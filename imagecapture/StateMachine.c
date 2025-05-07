@@ -49,23 +49,76 @@ const mcu_pin_obj_t _pins[] = {
     [20] = { .number = 20 },
     [21] = { .number = 21 },
     [22] = { .number = 22 },
-    [23] = { .number = 137 },
-    [24] = { .number = 137 },
-    [25] = { .number = 137 },
+    [23] = { .number = 23 },
+    [24] = { .number = 24 },
+    [25] = { .number = 25 },
     [26] = { .number = 26 },
     [27] = { .number = 27 },
     [28] = { .number = 28 },
     [29] = { .number = 29 },
+    #if NUM_BANK0_GPIOS == 48
+    [30] = { .number = 30 },
+    [31] = { .number = 31 },
+    [32] = { .number = 32 },
+    [33] = { .number = 33 },
+    [34] = { .number = 34 },
+    [35] = { .number = 35 },
+    [36] = { .number = 36 },
+    [37] = { .number = 37 },
+    [38] = { .number = 38 },
+    [39] = { .number = 39 },
+    [40] = { .number = 40 },
+    [41] = { .number = 41 },
+    [42] = { .number = 42 },
+    [43] = { .number = 43 },
+    [44] = { .number = 44 },
+    [45] = { .number = 45 },
+    [46] = { .number = 46 },
+    [47] = { .number = 47 },
+    #endif
 };
 
 const mcu_pin_obj_t *mcu_get_pin_by_number(uint8_t number) {
+    #if PICO_CYW43_SUPPORTED
+        bool used = false;
+        #if CYW43_DEFAULT_PIN_WL_REG_ON
+        if (number == CYW43_DEFAULT_PIN_WL_REG_ON)
+            used = true;
+        #endif
+        #if CYW43_DEFAULT_PIN_WL_DATA_OUT
+        if (number == CYW43_DEFAULT_PIN_WL_DATA_OUT)
+            used = true;
+        #endif
+        #if CYW43_DEFAULT_PIN_WL_DATA_IN
+        if (number == CYW43_DEFAULT_PIN_WL_DATA_IN)
+            used = true;
+        #endif
+        #if CYW43_DEFAULT_PIN_WL_HOST_WAKE
+        if (number == CYW43_DEFAULT_PIN_WL_HOST_WAKE)
+            used = true;
+        #endif
+        #if CYW43_DEFAULT_PIN_WL_CLOCK
+        if (number == CYW43_DEFAULT_PIN_WL_CLOCK)
+            used = true;
+        #endif
+        #if CYW43_DEFAULT_PIN_WL_CS
+        if (number == CYW43_DEFAULT_PIN_WL_CS)
+            used = true;
+        #endif
+        if (used == true) {
+            printf("Error: asked for pin #%d but is already used by CYW43 module\n", number);
+            return NULL;
+        }
+    #endif
     if (number < NUM_BANK0_GPIOS)
         return &_pins[number];
+    printf("Error: asked for pin #%d but has %d pins\n", number, NUM_BANK0_GPIOS);
     return NULL;
 }
 
 void claim_pin(const mcu_pin_obj_t *pin) {
     if (pin->number >= NUM_BANK0_GPIOS)
+        printf("Error: asked for pin #%d but has %d pins\n", pin->number, NUM_BANK0_GPIOS);
         return;
     gpio_bank0_pin_claimed |= (1LL << pin->number);
 }
@@ -407,7 +460,7 @@ void common_hal_rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
     if (PIO_PINMASK_VALUE(pins_we_use) >> 32) {
         pio_gpio_offset = 16;
         if (PIO_PINMASK_VALUE(pins_we_use) & 0xffff) {
-            printf("Cannot use GPIO0..15 together with GPIO32..47");
+            printf("Cannot use GPIO0..15 together with GPIO32..47\n");
         }
     }
     #endif

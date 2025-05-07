@@ -16,6 +16,9 @@
     }
 
 void common_hal_imagecapture_parallelimagecapture_construct(rp2pio_statemachine_obj_t *self, mcu_pin_obj_t *data, uint8_t data_clock, uint8_t vertical_sync, uint8_t horizontal_reference) {
+    if (data_clock > 31 || vertical_sync > 31 || horizontal_reference > 31)
+        printf("Error: pio_encode_wait_gpio does not support gpio n° > to 31");
+
     uint16_t imagecapture_code[] = IMAGECAPTURE_CODE(DATA_COUNT, data_clock, vertical_sync, horizontal_reference);
 
     common_hal_rp2pio_statemachine_construct(self,
