@@ -158,43 +158,39 @@ const size_t list_sizes[OV5640_LIST_COUNT] = {
     [OV5640_LIST_FINALIZE_FIRMWARE_LOAD] = sizeof(_finalize_firmware_load_values),
 };
 
-int inline i2c_ov5640_write(const uint8_t *src, size_t len) {
-    return i2c_write_blocking(CAM_I2C, CAM_I2C_ADDR, src, len, false);
+int inline i2c_ov5640_write(i2c_inst_t *i2c, const uint8_t *src, size_t len) {
+    return i2c_write_blocking(i2c, CAM_I2C_ADDR, src, len, false);
 }
 
-uint16_t inline _get_chip_id() {
-    return _read_register16(_CHIP_ID_HIGH);
-}
-
-void _write_register(uint16_t reg, uint8_t value) {
+void _write_register(i2c_inst_t *i2c, uint16_t reg, uint8_t value) {
     uint8_t b[] = { reg >> 8, reg & 0xFF, value };
-    i2c_ov5640_write(b, sizeof(b));
+    i2c_ov5640_write(i2c, b, sizeof(b));
 }
 
-void _write_addr_reg(uint16_t reg, uint16_t x_value, uint16_t y_value) {
-    _write_register16(reg, x_value);
-    _write_register16(reg + 2, y_value);
+void _write_register16(i2c_inst_t *i2c, uint16_t reg, uint16_t value) {
+    _write_register(i2c, reg, value >> 8);
+    _write_register(i2c, reg + 1, value & 0xFF);
 }
 
-void _write_register16(uint16_t reg, uint16_t value) {
-    _write_register(reg, value >> 8);
-    _write_register(reg + 1, value & 0xFF);
+void _write_addr_reg(i2c_inst_t *i2c, uint16_t reg, uint16_t x_value, uint16_t y_value) {
+    _write_register16(i2c, reg, x_value);
+    _write_register16(i2c, reg + 2, y_value);
 }
 
-uint8_t _read_register(uint16_t reg) {
+uint8_t _read_register(i2c_inst_t *i2c, uint16_t reg) {
     uint8_t b[] = { reg >> 8, reg & 0xFF };
-    i2c_ov5640_write(b, sizeof(b));
-    i2c_read_blocking(CAM_I2C, CAM_I2C_ADDR, &b[0], 1, false);
+    i2c_ov5640_write(i2c, b, sizeof(b));
+    i2c_read_blocking(i2c, CAM_I2C_ADDR, &b[0], 1, false);
     return b[0];
 }
 
-uint16_t _read_register16(uint16_t reg) {
-    uint8_t high = _read_register(reg);
-    uint8_t low = _read_register(reg + 1);
+uint16_t _read_register16(i2c_inst_t *i2c, uint16_t reg) {
+    uint8_t high = _read_register(i2c, reg);
+    uint8_t low = _read_register(i2c, reg + 1);
     return (high << 8) | low;
 }
 
-void _write_list(enum OV5640_REGS_LIST_TYPE list) {
+void _write_list(i2c_inst_t *i2c, enum OV5640_REGS_LIST_TYPE list) {
     const uint16_t *reg_list = regs_list[list];
     const uint8_t *value_list = values_list[list];
     size_t length = list_sizes[list];
@@ -202,22 +198,22 @@ void _write_list(enum OV5640_REGS_LIST_TYPE list) {
         if (reg_list[i] == _REG_DLY) {
             sleep_ms(value_list[i]);
         } else {
-            _write_register(reg_list[i], value_list[i]);
+            _write_register(i2c, reg_list[i], value_list[i]);
         }
     }
 }
 
-void _write_reg_bits(uint16_t reg, uint8_t mask, bool enable) {
-    uint8_t val = _read_register(reg);
+void _write_reg_bits(i2c_inst_t *i2c, uint16_t reg, uint8_t mask, bool enable) {
+    uint8_t val = _read_register(i2c, reg);
     if (enable) {
         val |= mask;
     } else {
         val &= ~mask;
     }
-    _write_register(reg, val);
+    _write_register(i2c, reg, val);
 }
 
-void _set_image_options(bool binning, enum OV5640_COLOR_TYPE colorspace) {
+void _set_image_options(i2c_inst_t *i2c, bool binning, enum OV5640_COLOR_TYPE colorspace) {
     // Initialize registers
     uint8_t reg20 = 0;
     uint8_t reg21 = 0;
@@ -251,23 +247,23 @@ void _set_image_options(bool binning, enum OV5640_COLOR_TYPE colorspace) {
     else if (reg4514_test == 7)
         reg4514 = 0xAA;
 
-    _write_register(_TIMING_TC_REG20, reg20);
-    _write_register(_TIMING_TC_REG21, reg21);
-    _write_register(0x4514, reg4514);
+    _write_register(i2c, _TIMING_TC_REG20, reg20);
+    _write_register(i2c, _TIMING_TC_REG21, reg21);
+    _write_register(i2c, 0x4514, reg4514);
 
     // Additional configuration based on binning
     if (binning) {
-        _write_register(0x4520, 0x0B);
-        _write_register(_X_INCREMENT, 0x31);
-        _write_register(_Y_INCREMENT, 0x31);
+        _write_register(i2c, 0x4520, 0x0B);
+        _write_register(i2c, _X_INCREMENT, 0x31);
+        _write_register(i2c, _Y_INCREMENT, 0x31);
     } else {
-        _write_register(0x4520, 0x10);
-        _write_register(_X_INCREMENT, 0x11);
-        _write_register(_Y_INCREMENT, 0x11);
+        _write_register(i2c, 0x4520, 0x10);
+        _write_register(i2c, _X_INCREMENT, 0x11);
+        _write_register(i2c, _Y_INCREMENT, 0x11);
     }
 }
 
-void _set_pll(bool bypass, uint8_t multiplier, uint8_t sys_div, uint8_t pre_div, bool root_2x, uint8_t pclk_root_div, bool pclk_manual, uint8_t pclk_div) {
+void _set_pll(i2c_inst_t *i2c, bool bypass, uint8_t multiplier, uint8_t sys_div, uint8_t pre_div, bool root_2x, uint8_t pclk_root_div, bool pclk_manual, uint8_t pclk_div) {
     if (multiplier > 252 || multiplier < 4 ||
         sys_div > 15 || pre_div > 8 ||
         pclk_div > 31 || pclk_root_div > 3) {
@@ -275,26 +271,26 @@ void _set_pll(bool bypass, uint8_t multiplier, uint8_t sys_div, uint8_t pre_div,
         return;
     }
 
-    _write_register(0x3039, bypass ? 0x80 : 0x00);
-    _write_register(0x3034, 0x1A);
-    _write_register(0x3035, 1 | ((sys_div & 0xF) << 4));
-    _write_register(0x3036, multiplier & 0xFF);
-    _write_register(0x3037, (pre_div & 0xF) | (root_2x ? 0x10 : 0x00));
-    _write_register(0x3108, ((pclk_root_div & 0x3) << 4) | 0x06);
-    _write_register(0x3824, pclk_div & 0x1F);
-    _write_register(0x460C, pclk_manual ? 0x22 : 0x22); // ??
-    _write_register(0x3103, 0x13);
+    _write_register(i2c, 0x3039, bypass ? 0x80 : 0x00);
+    _write_register(i2c, 0x3034, 0x1A);
+    _write_register(i2c, 0x3035, 1 | ((sys_div & 0xF) << 4));
+    _write_register(i2c, 0x3036, multiplier & 0xFF);
+    _write_register(i2c, 0x3037, (pre_div & 0xF) | (root_2x ? 0x10 : 0x00));
+    _write_register(i2c, 0x3108, ((pclk_root_div & 0x3) << 4) | 0x06);
+    _write_register(i2c, 0x3824, pclk_div & 0x1F);
+    _write_register(i2c, 0x460C, pclk_manual ? 0x22 : 0x22); // ??
+    _write_register(i2c, 0x3103, 0x13);
 }
 
-void _set_quality(uint8_t quality) {
+void set_quality(const camera_settings_t *data, uint8_t quality) {
     if (quality < 2 || quality > 54) {
         quality = 54;
         printf("Warning: quality should be equal to or included between 2 and 54");
     }
-    _write_register(_COMPRESSION_CTRL07, quality & 0x3F); // why the mask
+    _write_register(data->i2c, _COMPRESSION_CTRL07, quality & 0x3F); // why the mask
 }
 
-size_t _get_buffer_size(enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE size, uint quality) {
+size_t get_buffer_size(const camera_settings_t *data, enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE size, uint8_t quality) {
     if (colorspace == OV5640_COLOR_JPEG) {
         return GET_JPG_BUFFER_SIZE(size, quality); // arbitrary
     } else if (colorspace == OV5640_COLOR_GRAYSCALE) {
@@ -303,22 +299,22 @@ size_t _get_buffer_size(enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE
     return GET_BUFFER_SIZE(size);
 }
 
-void _set_white_balance(enum OV5640_WHITE_BALANCE_TYPE value) {
+void set_white_balance(const camera_settings_t *data, enum OV5640_WHITE_BALANCE_TYPE value) {
     // Validate the input value
     if (value < OV5640_WHITE_BALANCE_AUTO || value > OV5640_WHITE_BALANCE_INCANDESCENT) {
         printf("Invalid exposure value (EV) %d, use one of the OV5640_WHITE_BALANCE_* constants\n", value);
         value = OV5640_WHITE_BALANCE_AUTO;
     }
 
-    _write_register(0x3212, 0x03);
+    _write_register(data->i2c, 0x3212, 0x03);
     for (int i = 0; i < 7; i++)
-        _write_register(_light_registers[i], _light_modes[value][i]);
+        _write_register(data->i2c, _light_registers[i], _light_modes[value][i]);
 
-    _write_register(0x3212, 0x13);
-    _write_register(0x3212, 0xA3);
+    _write_register(data->i2c, 0x3212, 0x13);
+    _write_register(data->i2c, 0x3212, 0xA3);
 }
 
-void _set_size_and_colorspace(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace) {
+void set_size_and_colorspace(const camera_settings_t *data, enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace) {
     uint16_t width = _resolution_info[size][0];
     uint16_t height = _resolution_info[size][1];
     enum OV5640_ASPECT aspect = _resolution_info[size][2];
@@ -332,24 +328,24 @@ void _set_size_and_colorspace(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE
         (width == max_width / 2 && height == max_height / 2)
     );
 
-    _write_addr_reg(_X_ADDR_ST_H, rt[RATIO_TABLE_sx], rt[RATIO_TABLE_sy]);
-    _write_addr_reg(_X_ADDR_END_H, rt[RATIO_TABLE_ex], rt[RATIO_TABLE_ey]);
-    _write_addr_reg(_X_OUTPUT_SIZE_H, width, height);
+    _write_addr_reg(data->i2c, _X_ADDR_ST_H, rt[RATIO_TABLE_sx], rt[RATIO_TABLE_sy]);
+    _write_addr_reg(data->i2c, _X_ADDR_END_H, rt[RATIO_TABLE_ex], rt[RATIO_TABLE_ey]);
+    _write_addr_reg(data->i2c, _X_OUTPUT_SIZE_H, width, height);
 
     if (!_binning) {
-        _write_addr_reg(_X_TOTAL_SIZE_H, rt[RATIO_TABLE_tx], rt[RATIO_TABLE_ty]);
-        _write_addr_reg(_X_OFFSET_H, rt[RATIO_TABLE_ox], rt[RATIO_TABLE_oy]);
+        _write_addr_reg(data->i2c, _X_TOTAL_SIZE_H, rt[RATIO_TABLE_tx], rt[RATIO_TABLE_ty]);
+        _write_addr_reg(data->i2c, _X_OFFSET_H, rt[RATIO_TABLE_ox], rt[RATIO_TABLE_oy]);
     } else {
         if (width > 920) {
-            _write_addr_reg(_X_TOTAL_SIZE_H, rt[RATIO_TABLE_tx] - 200, rt[RATIO_TABLE_ty] / 2);
+            _write_addr_reg(data->i2c, _X_TOTAL_SIZE_H, rt[RATIO_TABLE_tx] - 200, rt[RATIO_TABLE_ty] / 2);
         } else {
-            _write_addr_reg(_X_TOTAL_SIZE_H, 2060, rt[RATIO_TABLE_ty] / 2);
+            _write_addr_reg(data->i2c, _X_TOTAL_SIZE_H, 2060, rt[RATIO_TABLE_ty] / 2);
         }
-        _write_addr_reg(_X_OFFSET_H, rt[RATIO_TABLE_ox] / 2, rt[RATIO_TABLE_oy] / 2);
+        _write_addr_reg(data->i2c, _X_OFFSET_H, rt[RATIO_TABLE_ox] / 2, rt[RATIO_TABLE_oy] / 2);
     }
 
-    _write_reg_bits(_ISP_CONTROL_01, 0x20, _scale);
-    _set_image_options(_binning, colorspace);
+    _write_reg_bits(data->i2c, _ISP_CONTROL_01, 0x20, _scale);
+    _set_image_options(data->i2c, _binning, colorspace);
 
     if (colorspace == OV5640_COLOR_JPEG) {
         uint16_t sys_mul = 200;
@@ -357,45 +353,52 @@ void _set_size_and_colorspace(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE
             sys_mul = 160;
         if (size < OV5640_SIZE_XGA)
             sys_mul = 180;
-        _set_pll(false, sys_mul, 4, 2, false, 2, true, 4);
+        _set_pll(data->i2c, false, sys_mul, 4, 2, false, 2, true, 4);
     } else
-        _set_pll(false, 32, 1, 1, false, 1, true, 4);
+        _set_pll(data->i2c, false, 32, 1, 1, false, 1, true, 4);
 
-    _write_list((enum OV5640_REGS_LIST_TYPE) colorspace);
+    _write_list(data->i2c, (enum OV5640_REGS_LIST_TYPE) colorspace);
 }
 
-void power_on() {
+void power_on(const camera_settings_t *data) {
     // masterclock - 150 MHz / 7.5 = 20Mhz (MCLK_FREQ)
-    clock_gpio_init(MCLK_GPIO, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 7.5);
+    clock_gpio_init(data->mclk_gpio, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 7.5);
 
     // Initialize reset/powerdown pins, set their direction to output
-    gpio_init(RST_GPIO);
-    gpio_set_dir(RST_GPIO, GPIO_OUT);
-    gpio_init(PWD_GPIO);
-    gpio_set_dir(PWD_GPIO, GPIO_OUT);
+    gpio_init(data->rst_gpio);
+    gpio_set_dir(data->rst_gpio, GPIO_OUT);
+    gpio_init(data->pwd_gpio);
+    gpio_set_dir(data->pwd_gpio, GPIO_OUT);
 
     // Procedure copied from adafruit's OV5640 library
-    gpio_put(RST_GPIO, 0);
-    gpio_put(PWD_GPIO, 1);
+    gpio_put(data->rst_gpio, 0);
+    gpio_put(data->pwd_gpio, 1);
     sleep_us(5000);
-    gpio_put(PWD_GPIO, 0);
+    gpio_put(data->pwd_gpio, 0);
     sleep_us(1000);
-    gpio_put(RST_GPIO, 1);
+    gpio_put(data->rst_gpio, 1);
     sleep_us(20000);
 }
 
-void init_cam(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace, uint8_t quality) {
-    i2c_init(CAM_I2C, CAM_I2C_FREQ);
-    gpio_set_function(SDA_GPIO, GPIO_FUNC_I2C);
-    gpio_set_function(SCL_GPIO, GPIO_FUNC_I2C);
-    gpio_pull_up(SDA_GPIO);
-    gpio_pull_up(SCL_GPIO);
+void init_cam(const camera_settings_t *data, enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace, uint8_t quality) {
+    i2c_init(data->i2c, CAM_I2C_FREQ);
+    gpio_set_function(data->sda_gpio, GPIO_FUNC_I2C);
+    gpio_set_function(data->scl_gpio, GPIO_FUNC_I2C);
+    gpio_pull_up(data->sda_gpio);
+    gpio_pull_up(data->scl_gpio);
 
-    _write_list(OV5640_LIST_INIT);
+    _write_list(data->i2c, OV5640_LIST_INIT);
+    sleep_us(1000);
 
-    _set_quality(quality);
-    _set_white_balance(OV5640_WHITE_BALANCE_AUTO);
-    _set_size_and_colorspace(size, colorspace);
+    set_quality(data, quality);
+    sleep_us(1000);
+    set_white_balance(data, OV5640_WHITE_BALANCE_AUTO);
+    sleep_us(1000);
+    set_size_and_colorspace(data, size, colorspace);
 
     sleep_ms(300);
+}
+
+uint16_t inline get_chip_id(const camera_settings_t *data) {
+    return _read_register16(data->i2c, _CHIP_ID_HIGH);
 }

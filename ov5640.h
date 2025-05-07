@@ -1,21 +1,40 @@
-// pins
-#define MCLK_GPIO 21 // also called XCLK, "master" clock
-#define SDA_GPIO 2
-#define SCL_GPIO 3
-#define PWD_GPIO 14
-#define RST_GPIO 15
-#define DATA_GPIO 6 // first data pin connection (labelled D2 on OV5640 module)
+#include "hardware/i2c.h"
+
+// settings (pins & i2c)
+#define CAM1_MCLK_GPIO 21 // also known as "XCLK - check clock_gpio_init for compatibility
+#define CAM1_PWD_GPIO 4
+#define CAM1_RST_GPIO 5
+#define CAM1_SDA_GPIO 2
+#define CAM1_SCL_GPIO 3
+#define CAM1_I2C i2c1 // or i2c0 depending on SDA/SCL bindings
+
+#define CAM1_DATA_GPIO 6 // first data pin connection (labelled D2 on OV5640 module)
+#define CAM1_PCLK_GPIO 14 // pixel clock
+#define CAM1_VSYNC_GPIO 17
+#define CAM1_HREF_GPIO 16
+
+typedef struct {
+    uint8_t mclk_gpio;
+    uint8_t sda_gpio;
+    uint8_t scl_gpio;
+    uint8_t pwd_gpio;
+    uint8_t rst_gpio;
+    i2c_inst_t *i2c;
+} camera_settings_t;
+
+typedef struct {
+    uint8_t pclk_gpio;
+    uint8_t vsync_gpio;
+    uint8_t href_gpio;
+} camera_sm_params_t;
+
 #define DATA_COUNT 8 // how many data pins there is - they should all be in line / next to DATA_GPIO
-#define PCLK_GPIO 26 // pixel clock
-#define VSYNC_GPIO 27
-#define HREF_GPIO 4
 
 // MasterClock mclk
 #define MCLK_FREQ 20000000 // 20 000 000 value used by adafruit's OV5640 library - 25000000 is what's used by the camera chip itself when auto-clockmastering
 # define MCLK_DUTY_CYCLE 50 // 32768 value used by adafruit's OV5640 library = 50% (half of 16bit)
 
 // I2C defines
-#define CAM_I2C i2c1
 #define CAM_I2C_ADDR 0x3C
 #define CAM_I2C_FREQ 100000
 
@@ -70,23 +89,15 @@ extern const uint16_t _resolution_info[][3];
 #define GET_GRAYSCALE_BUFFER_SIZE(size) (_resolution_info[size][0] * _resolution_info[size][1])
 #define GET_BUFFER_SIZE(size) (2 * _resolution_info[size][0] * _resolution_info[size][1])
 
-// interface functions
-void _write_register(uint16_t reg, uint8_t value);
-void _write_addr_reg(uint16_t reg, uint16_t x_value, uint16_t y_value);
-void _write_register16(uint16_t reg, uint16_t value);
-uint8_t _read_register(uint16_t reg);
-uint16_t _read_register16(uint16_t reg);
-void _write_list(enum OV5640_REGS_LIST_TYPE list);
-void _write_reg_bits(uint16_t reg, uint8_t mask, bool enable);
-uint16_t _get_chip_id();
+uint16_t get_chip_id(const camera_settings_t *data);
+size_t get_buffer_size(const camera_settings_t *data, enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE size, uint8_t quality);
 
-void _set_quality(uint8_t quality);
-void _set_white_balance(enum OV5640_WHITE_BALANCE_TYPE value);
-void _set_size_and_colorspace(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace);
-size_t _get_buffer_size(enum OV5640_COLOR_TYPE colorspace, enum OV5640_SIZE_TYPE size, uint quality);
+void set_quality(const camera_settings_t *data, uint8_t quality);
+void set_white_balance(const camera_settings_t *data, enum OV5640_WHITE_BALANCE_TYPE value);
+void set_size_and_colorspace(const camera_settings_t *data, enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace);
 
-void power_on();
-void init_cam(enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace, uint8_t quality);
+void power_on(const camera_settings_t *data);
+void init_cam(const camera_settings_t *data, enum OV5640_SIZE_TYPE size, enum OV5640_COLOR_TYPE colorspace, uint8_t quality);
 
 // I2C constants
 #define _SYSTEM_RESET00 0x3000
