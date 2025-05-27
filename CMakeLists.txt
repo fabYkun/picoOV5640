@@ -2,6 +2,7 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+set(ENABLE_PSRAM "0" CACHE STRING "Enables PSRAM support (0/1)")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -36,6 +37,12 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(camera camera.c ov5640.c imagecapture/StateMachine.c imagecapture/ParallelImageCapture.c )
+
+if(ENABLE_PSRAM)
+    add_compile_definitions(ENABLE_PSRAM=1)
+    message(STATUS "PSRAM enabled: Using custom linker script (memmap_custom.ld)")
+    pico_set_linker_script(DualShot ${CMAKE_SOURCE_DIR}/memmap_custom.ld) # memory map linker script
+endif()
 
 pico_set_program_name(camera "camera")
 pico_set_program_version(camera "0.1")
